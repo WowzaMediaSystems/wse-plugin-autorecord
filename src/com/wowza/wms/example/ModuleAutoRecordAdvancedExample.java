@@ -2,7 +2,7 @@
  * This code and all components (c) Copyright 2006 - 2016, Wowza Media Systems, LLC. All rights reserved.
  * This code is licensed pursuant to the Wowza Public License version 1.0, available at www.wowza.com/legal.
  */
-package com.wowza.wms.plugin;
+package com.wowza.wms.example;
 
 import java.io.*;
 
@@ -16,7 +16,7 @@ import com.wowza.wms.stream.*;
 import com.wowza.wms.vhost.*;
 
 /**
- * Axample module that shows how to implement some advanced StreamRecorder features.
+ * Example module that shows how to implement some advanced StreamRecorder features.
  *
  */
 public class ModuleAutoRecordAdvancedExample extends ModuleBase implements IModuleOnApp
@@ -130,6 +130,8 @@ public class ModuleAutoRecordAdvancedExample extends ModuleBase implements IModu
 		// Create a new StreamRecorderParameters object with defaults set via properties in application.xml.
 		StreamRecorderParameters recordParams = new StreamRecorderParameters(appInstance);
 		
+		// uncomment and modify each setting below to override default behaviour.
+		
 		// segment by size, create 60 minute segments using default content path
 		//recordParams.segmentationType = IStreamRecorderConstants.SEGMENT_BY_DURATION;
 		//recordParams.segmentDuration = 60*60*1000;
@@ -166,7 +168,7 @@ public class ModuleAutoRecordAdvancedExample extends ModuleBase implements IModu
 		}
 		else
 		{
-			// or tell it to recorde a named stream. The recorder will start immediately and wait for the stream to be published.
+			// or tell it to record a named stream. The recorder will start immediately and wait for the stream to be published.
 			vhost.getLiveStreamRecordManager().startRecording(appInstance, "myStream", recordParams);
 		}
 	}

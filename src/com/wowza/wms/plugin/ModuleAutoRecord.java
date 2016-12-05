@@ -22,12 +22,12 @@ public class ModuleAutoRecord extends ModuleBase
 		if(recordAllStreams)
 		{
 			// Automatically record all streams as they are published. 
-			// Recorders will only be created when a stream is first published.
+			// Recorders will only be created when a stream is first published and will stay loaded after the steram unpublishes.
 			appInstance.getVHost().getLiveStreamRecordManager().startRecording(appInstance, recordParams);
 		}
 		else
 		{
-			// Read a pipe (|) or comma separated list of names from properties and just start recorders for each of these names
+			// Read a pipe (|) or comma separated list of names from properties and start recorders for each of these names
 			// Recorders will be created immediatly for each name and will wait for the stream to be published.
 			String namesStr = appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderStreamNames", null);
 			namesStr = appInstance.getProperties().getPropertyStr("streamRecorderStreamNames", namesStr);
