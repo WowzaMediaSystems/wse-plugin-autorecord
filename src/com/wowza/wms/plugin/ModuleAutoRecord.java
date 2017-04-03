@@ -1,45 +1,205 @@
 /*
- * This code and all components (c) Copyright 2006 - 2016, Wowza Media Systems, LLC. All rights reserved.
+ * This code and all components (c) Copyright 2006 - 2017, Wowza Media Systems, LLC. All rights reserved.
  * This code is licensed pursuant to the Wowza Public License version 1.0, available at www.wowza.com/legal.
  */
 package com.wowza.wms.plugin;
 
 import com.wowza.util.StringUtils;
-import com.wowza.wms.application.*;
-import com.wowza.wms.livestreamrecord.manager.*;
-import com.wowza.wms.module.*;
+import com.wowza.wms.application.IApplicationInstance;
+import com.wowza.wms.livestreamrecord.manager.StreamRecorderParameters;
+import com.wowza.wms.logging.WMSLogger;
+import com.wowza.wms.logging.WMSLoggerFactory;
+import com.wowza.wms.logging.WMSLoggerIDs;
+import com.wowza.wms.module.ModuleBase;
+import com.wowza.wms.stream.IMediaStream;
+import com.wowza.wms.stream.MediaStreamActionNotifyBase;
+import com.wowza.wms.vhost.IVHost;
 
 public class ModuleAutoRecord extends ModuleBase
 {
-	public void onAppStart(IApplicationInstance appInstance)
+	public static final String CLASSNAME = "ModuleAutoRecord";
+
+	private enum RecordType
 	{
+		all, source, transcoder, allow, whitelist, deny, blacklist, none;
+	}
+
+	private WMSLogger logger = null;
+	private IApplicationInstance appInstance = null;
+	private IVHost vhost = null;
+	private StreamListener actionNotify = new StreamListener();
+
+	boolean recordAllStreams = false;
+	private String namesStr = null;
+	private RecordType recordType = RecordType.none;
+
+	private Boolean debugLog = false;
+	private StreamRecorderParameters recordParams = null;
+
+	public void onAppCreate(IApplicationInstance appInstance)
+	{
+		logger = WMSLoggerFactory.getLoggerObj(appInstance);
+		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "]", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+
+		this.appInstance = appInstance;
+		vhost = appInstance.getVHost();
+
+		// main streamRecorder debugLog property
+		debugLog = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderDebugEnable", debugLog);
+
+		// local debugLog property
+		debugLog = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderAutoRecordDebugLog", debugLog);
+
+		if (logger.isDebugEnabled())
+			debugLog = true;
+
+		try
+		{
+			recordType = RecordType.valueOf(appInstance.getProperties().getPropertyStr("streamRecorderRecordType", recordType.toString()).toLowerCase());
+		}
+		catch (Exception e)
+		{
+			logger.error(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] streamRecorderRecordType value not correct", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+
+		}
+		namesStr = appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderStreamNames", null);
+
 		// Create a new StreamRecorderParameters object with defaults set via StreamRecorder Properties in the application.
-		StreamRecorderParameters recordParams = new StreamRecorderParameters(appInstance);
-		
-		boolean recordAllStreams = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderRecordAllStreams", true);
+		recordParams = new StreamRecorderParameters(appInstance);
+
+		recordAllStreams = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordAllStreams);
 		recordAllStreams = appInstance.getProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordAllStreams);
-		
-		if(recordAllStreams)
+
+		if (recordAllStreams || recordType == RecordType.all)
 		{
 			// Automatically record all streams as they are published. 
 			// Recorders will only be created when a stream is first published and will stay loaded after the steram unpublishes.
 			appInstance.getVHost().getLiveStreamRecordManager().startRecording(appInstance, recordParams);
+			logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] recording all streams", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 		}
-		else
+	}
+
+	class StreamListener extends MediaStreamActionNotifyBase
+	{
+		@Override
+		public void onPublish(IMediaStream stream, String streamName, boolean isRecord, boolean isAppend)
 		{
-			// Read a pipe (|) or comma separated list of names from properties and start recorders for each of these names
-			// Recorders will be created immediatly for each name and will wait for the stream to be published.
-			String namesStr = appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderStreamNames", null);
-			namesStr = appInstance.getProperties().getPropertyStr("streamRecorderStreamNames", namesStr);
-		
-			if(!StringUtils.isEmpty(namesStr))
+			if(vhost.getLiveStreamRecordManager().getRecorder(appInstance, streamName) != null)
+				return;
+			
+			boolean matchFound = checkNames(streamName);
+			boolean canRecord = false;
+			switch (recordType)
 			{
-				String[] names = namesStr.split("(\\||,)");
-				for(String name : names)
-				{
-					appInstance.getVHost().getLiveStreamRecordManager().startRecording(appInstance, name.trim(), recordParams);
-				}
+			case allow:
+			case whitelist:
+				if (matchFound)
+					canRecord = true;
+				break;
+
+			case deny:
+			case blacklist:
+				if (!matchFound)
+					canRecord = true;
+				break;
+
+			case source:
+				if (!stream.isTranscodeResult())
+					canRecord = true;
+				break;
+
+			case transcoder:
+				if (stream.isTranscodeResult())
+					canRecord = true;
+				break;
+				
+			default:
+				break;
+			}
+
+			if (canRecord)
+			{
+				if (debugLog)
+					logger.info(CLASSNAME + ".onPublish [" + appInstance.getContextStr() + "/" + streamName + "] starting recording. RecordType: " + recordType, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+				vhost.getLiveStreamRecordManager().startRecording(appInstance, streamName, recordParams);
 			}
 		}
+
+		private boolean checkNames(String streamName)
+		{
+			boolean matchFound = false;
+
+			if (!StringUtils.isEmpty(namesStr))
+			{
+				while (true)
+				{
+					if (namesStr.equals("*"))
+					{
+						if (debugLog)
+							logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] match found against *", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+						matchFound = true;
+						break;
+					}
+					// Read a pipe (|) or comma separated list of names from properties and start recorder if it matches
+					String[] names = namesStr.split("(\\||,)");
+					for (String name : names)
+					{
+						name = name.trim();
+						if (debugLog)
+							logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex check against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+						// regex match
+						if (streamName.matches(name))
+						{
+							if (debugLog)
+								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+							matchFound = true;
+							break;
+						}
+						// wildcard suffix match
+						if (name.startsWith("*"))
+						{
+							if (debugLog)
+								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] wildcard suffix check against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+							name = name.substring(1);
+							if (streamName.endsWith(name))
+							{
+								if (debugLog)
+									logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] wildcard suffix match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+								matchFound = true;
+								break;
+							}
+						}
+						// wildcard prefix match
+						if (name.endsWith("*"))
+						{
+							if (debugLog)
+								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] wildcard prefix check against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+							name = name.substring(0, name.length() - 1);
+							if (streamName.startsWith(name))
+							{
+								if (debugLog)
+									logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] wildcard prefix match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+								matchFound = true;
+								break;
+							}
+						}
+					}
+					break;
+				}
+			}
+			else
+			{
+				if (debugLog)
+					logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] streamRecorderStreamNames list is empty", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+			}
+
+			return matchFound;
+		}
+	}
+
+	public void onStreamCreate(IMediaStream stream)
+	{
+		if (recordType != RecordType.all && recordType != RecordType.none)
+			stream.addClientListener(actionNotify);
 	}
 }
