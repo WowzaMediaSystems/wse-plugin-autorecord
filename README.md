@@ -5,9 +5,7 @@
 Wowza Streaming Engine™ 4.0.0 or later is required.
 
 ## Usage
-When the application is started, the module checks to see if the `streamRecorderRecordAllStreams` property is set to **true** (default), and if so, it sets the Stream Recorder Manager to record all of the streams that are published to the application.
-
-If `streamRecorderRecordAllStreams` is set to **false**, the module checks to see if the `streamRecorderStreamNames` property contains a list of names to record, and if so, starts a recorder for each of these.
+When the application is started, the module checks to see if the `streamRecorderRecordAllStreams` property is set to **true** (default) or if the `streamRecorderRecordType` property is set to **all**, and if so, it sets the Stream Recorder Manager to record all of the streams that are published to the application. Alternatively, streams are recorded based on the `streamRecorderRecordType` setting and if a match is found in the `streamRecorderStreamNames` list.
 
 Each recorder that's started uses the default StreamRecorder parameters that are configured for the application. These can be set via the [StreamRecorder properties](https://www.wowza.com/forums/content.php?574-How-to-record-live-streams-%28Wowza-Streaming-Engine%29#livestreamrecordproperties). For more information, see [How to record live streams (Wowza Streaming Engine)](https://www.wowza.com/forums/content.php?574-How-to-record-live-streams-%28Wowza-Streaming-Engine%29)
 
