@@ -53,6 +53,15 @@ public class ModuleAutoRecord extends ModuleBase
 		if (logger.isDebugEnabled())
 			debugLog = true;
 
+		String streamType = appInstance.getStreamType();
+		if(streamType.contains("-record"))
+		{
+			String newStreamType = streamType.replace("-record", "");
+			appInstance.setStreamType(newStreamType);
+			
+			logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] Application has " + streamType + " stream type set. Changing to " + newStreamType + " stream type to prevent conflict.", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+		}
+		
 		try
 		{
 			recordType = RecordType.valueOf(appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderRecordType", recordType.toString()).toLowerCase());
@@ -70,8 +79,10 @@ public class ModuleAutoRecord extends ModuleBase
 
 		boolean recordAllStreams = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordType == RecordType.all);
 		recordAllStreams = appInstance.getProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordAllStreams);
+		if(recordAllStreams)
+			recordType = RecordType.all;
 
-		if (recordAllStreams || recordType == RecordType.all)
+		if (recordType == RecordType.all)
 		{
 			// Automatically record all streams as they are published. 
 			// Recorders will only be created when a stream is first published and will stay loaded after the steram unpublishes.
