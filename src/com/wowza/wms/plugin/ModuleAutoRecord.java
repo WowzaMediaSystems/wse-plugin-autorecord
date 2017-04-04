@@ -29,9 +29,9 @@ public class ModuleAutoRecord extends ModuleBase
 	private IVHost vhost = null;
 	private StreamListener actionNotify = new StreamListener();
 
-	boolean recordAllStreams = false;
 	private String namesStr = null;
-	private RecordType recordType = RecordType.none;
+	private String namesStrDelimiter = "(\\||,)";
+	private RecordType recordType = RecordType.all;
 
 	private Boolean debugLog = false;
 	private StreamRecorderParameters recordParams = null;
@@ -55,19 +55,20 @@ public class ModuleAutoRecord extends ModuleBase
 
 		try
 		{
-			recordType = RecordType.valueOf(appInstance.getProperties().getPropertyStr("streamRecorderRecordType", recordType.toString()).toLowerCase());
+			recordType = RecordType.valueOf(appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderRecordType", recordType.toString()).toLowerCase());
 		}
 		catch (Exception e)
 		{
-			logger.error(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] streamRecorderRecordType value not correct", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
-
+			logger.warn(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] streamRecorderRecordType value not correct. Disabling Automatic recording", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+			recordType = RecordType.none;
 		}
 		namesStr = appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderStreamNames", null);
+		namesStrDelimiter = appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderStreamNamesDelimiter", namesStrDelimiter);
 
 		// Create a new StreamRecorderParameters object with defaults set via StreamRecorder Properties in the application.
 		recordParams = new StreamRecorderParameters(appInstance);
 
-		recordAllStreams = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordAllStreams);
+		boolean recordAllStreams = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordType == RecordType.all);
 		recordAllStreams = appInstance.getProperties().getPropertyBoolean("streamRecorderRecordAllStreams", recordAllStreams);
 
 		if (recordAllStreams || recordType == RecordType.all)
@@ -87,18 +88,20 @@ public class ModuleAutoRecord extends ModuleBase
 			if(vhost.getLiveStreamRecordManager().getRecorder(appInstance, streamName) != null)
 				return;
 			
-			boolean matchFound = checkNames(streamName);
+			boolean matchFound = false;
 			boolean canRecord = false;
 			switch (recordType)
 			{
 			case allow:
 			case whitelist:
+				matchFound = checkNames(streamName);
 				if (matchFound)
 					canRecord = true;
 				break;
 
 			case deny:
 			case blacklist:
+				matchFound = checkNames(streamName);
 				if (!matchFound)
 					canRecord = true;
 				break;
@@ -112,7 +115,8 @@ public class ModuleAutoRecord extends ModuleBase
 				if (stream.isTranscodeResult())
 					canRecord = true;
 				break;
-				
+			
+			case none:
 			default:
 				break;
 			}
@@ -123,6 +127,8 @@ public class ModuleAutoRecord extends ModuleBase
 					logger.info(CLASSNAME + ".onPublish [" + appInstance.getContextStr() + "/" + streamName + "] starting recording. RecordType: " + recordType, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 				vhost.getLiveStreamRecordManager().startRecording(appInstance, streamName, recordParams);
 			}
+			else if(debugLog)
+				logger.info(CLASSNAME + ".onPublish [" + appInstance.getContextStr() + "/" + streamName + "] not starting recording. RecordType: " + recordType, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 		}
 
 		private boolean checkNames(String streamName)
@@ -141,7 +147,7 @@ public class ModuleAutoRecord extends ModuleBase
 						break;
 					}
 					// Read a pipe (|) or comma separated list of names from properties and start recorder if it matches
-					String[] names = namesStr.split("(\\||,)");
+					String[] names = namesStr.split(namesStrDelimiter);
 					for (String name : names)
 					{
 						name = name.trim();
@@ -199,7 +205,7 @@ public class ModuleAutoRecord extends ModuleBase
 
 	public void onStreamCreate(IMediaStream stream)
 	{
-		if (recordType != RecordType.all && recordType != RecordType.none)
+		if (recordType != RecordType.all)
 			stream.addClientListener(actionNotify);
 	}
 }
