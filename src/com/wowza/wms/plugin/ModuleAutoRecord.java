@@ -1,11 +1,12 @@
 /*
- * This code and all components (c) Copyright 2006 - 2018, Wowza Media Systems, LLC. All rights reserved.
+ * This code and all components (c) Copyright 2006 - 2019, Wowza Media Systems, LLC. All rights reserved.
  * This code is licensed pursuant to the Wowza Public License version 1.0, available at www.wowza.com/legal.
  */
 package com.wowza.wms.plugin;
 
 import com.wowza.util.StringUtils;
 import com.wowza.wms.application.IApplicationInstance;
+import com.wowza.wms.livestreamrecord.manager.ILiveStreamRecordManager;
 import com.wowza.wms.livestreamrecord.manager.StreamRecorderParameters;
 import com.wowza.wms.logging.WMSLogger;
 import com.wowza.wms.logging.WMSLoggerFactory;
@@ -35,6 +36,7 @@ public class ModuleAutoRecord extends ModuleBase
 
 	private Boolean debugLog = false;
 	private StreamRecorderParameters recordParams = null;
+	private boolean shutDownRecorderOnUnPublish = true;
 
 	public void onAppCreate(IApplicationInstance appInstance)
 	{
@@ -58,10 +60,10 @@ public class ModuleAutoRecord extends ModuleBase
 		{
 			String newStreamType = streamType.replace("-record", "");
 			appInstance.setStreamType(newStreamType);
-			
+
 			logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] Application has " + streamType + " stream type set. Changing to " + newStreamType + " stream type to prevent conflict.", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 		}
-		
+
 		try
 		{
 			recordType = RecordType.valueOf(appInstance.getStreamRecorderProperties().getPropertyStr("streamRecorderRecordType", recordType.toString()).toLowerCase());
@@ -84,11 +86,18 @@ public class ModuleAutoRecord extends ModuleBase
 
 		if (recordType == RecordType.all)
 		{
-			// Automatically record all streams as they are published. 
-			// Recorders will only be created when a stream is first published and will stay loaded after the steram unpublishes.
+			// Automatically record all streams as they are published.
+			// Recorders will only be created when a stream is first published.
 			appInstance.getVHost().getLiveStreamRecordManager().startRecording(appInstance, recordParams);
 			logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] recording all streams", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 		}
+
+		// Recorders will normally remain in memory after the stream is unpublished so they can easily be reused.
+		// Use streamRecorderStopRecorderOnUnPublish to stop the recorder when the stream is unpublished.
+		// The recorder will then be recreated when the stream is restarted.
+		shutDownRecorderOnUnPublish = appInstance.getStreamRecorderProperties().getPropertyBoolean("streamRecorderShutDownRecorderOnUnPublish", shutDownRecorderOnUnPublish);
+		shutDownRecorderOnUnPublish = appInstance.getProperties().getPropertyBoolean("streamRecorderShutDownRecorderOnUnPublish", shutDownRecorderOnUnPublish);
+		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] recorders will " + (!shutDownRecorderOnUnPublish ? "not " : "") + "be shut down on unpublish", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 	}
 
 	class StreamListener extends MediaStreamActionNotifyBase
@@ -96,9 +105,9 @@ public class ModuleAutoRecord extends ModuleBase
 		@Override
 		public void onPublish(IMediaStream stream, String streamName, boolean isRecord, boolean isAppend)
 		{
-			if(vhost.getLiveStreamRecordManager().getRecorder(appInstance, streamName) != null)
+			if(recordType == RecordType.all || vhost.getLiveStreamRecordManager().getRecorder(appInstance, streamName) != null)
 				return;
-			
+
 			boolean matchFound = false;
 			boolean canRecord = false;
 			switch (recordType)
@@ -126,7 +135,7 @@ public class ModuleAutoRecord extends ModuleBase
 				if (stream.isTranscodeResult())
 					canRecord = true;
 				break;
-			
+
 			case none:
 			default:
 				break;
@@ -212,11 +221,21 @@ public class ModuleAutoRecord extends ModuleBase
 
 			return matchFound;
 		}
+
+		@Override
+		public void onUnPublish(IMediaStream stream, String streamName, boolean isRecord, boolean isAppend)
+		{
+			if(shutDownRecorderOnUnPublish)
+			{
+				if (debugLog)
+					logger.info(CLASSNAME + ".onUnPublish [" + appInstance.getContextStr() + "/" + streamName + "] shutting down recorder", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+				vhost.getLiveStreamRecordManager().stopRecording(appInstance, streamName);
+			}
+		}
 	}
 
 	public void onStreamCreate(IMediaStream stream)
 	{
-		if (recordType != RecordType.all)
-			stream.addClientListener(actionNotify);
+		stream.addClientListener(actionNotify);
 	}
 }
