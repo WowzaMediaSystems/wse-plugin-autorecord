@@ -4,6 +4,8 @@
  */
 package com.wowza.wms.plugin;
 
+import java.util.regex.PatternSyntaxException;
+
 import com.wowza.util.StringUtils;
 import com.wowza.wms.application.IApplicationInstance;
 import com.wowza.wms.livestreamrecord.manager.ILiveStreamRecordManager;
@@ -202,12 +204,17 @@ public class ModuleAutoRecord extends ModuleBase
 							}
 						}
 						// regex match
-						if (streamName.matches(name))
-						{
+						try {
+							if (streamName.matches(name))
+							{
+								if (debugLog)
+									logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+								matchFound = true;
+								break;
+							}
+						} catch (PatternSyntaxException e) {
 							if (debugLog)
-								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
-							matchFound = true;
-							break;
+								logger.warn(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] exception: " + e.getMessage(), WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 						}
 					}
 					break;
