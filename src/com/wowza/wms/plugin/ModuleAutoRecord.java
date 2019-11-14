@@ -41,7 +41,7 @@ public class ModuleAutoRecord extends ModuleBase
 	public void onAppCreate(IApplicationInstance appInstance)
 	{
 		logger = WMSLoggerFactory.getLoggerObj(appInstance);
-		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "]", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] Build #6", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 
 		this.appInstance = appInstance;
 		vhost = appInstance.getVHost();
@@ -173,14 +173,6 @@ public class ModuleAutoRecord extends ModuleBase
 						name = name.trim();
 						if (debugLog)
 							logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex check against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
-						// regex match
-						if (streamName.matches(name))
-						{
-							if (debugLog)
-								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
-							matchFound = true;
-							break;
-						}
 						// wildcard suffix match
 						if (name.startsWith("*"))
 						{
@@ -208,6 +200,14 @@ public class ModuleAutoRecord extends ModuleBase
 								matchFound = true;
 								break;
 							}
+						}
+						// regex match
+						if (streamName.matches(name))
+						{
+							if (debugLog)
+								logger.info(CLASSNAME + ".checkNames [" + appInstance.getContextStr() + "/" + streamName + "] regex match found against " + name, WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+							matchFound = true;
+							break;
 						}
 					}
 					break;

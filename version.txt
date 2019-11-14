@@ -1,0 +1,34 @@
+Build 6
+	* Change the order for the name matching checks so that the regex check is last. This fixes a problem where the wildcard * character was causing an exception
+
+Build 5
+	* Added a property to shut down the recorders when the stream is unpublished. The normal action is to keep the recorder in memory so it can easily be reused but if unique stream names are used, the recorders are never reused anyway so eventually cause a memory leak.
+		Set `streamRecorderShutDownRecorderOnUnPublish` to false to disable this property. Default value is true.
+	* Minor code refactoring
+
+Build 4
+	* Added check to see what stream type is being set for the appInstance and switch any recording stream type for its non-recording counterpart
+
+Build 3
+	* Fixed incorrect property container for recordType property
+	* Changed recordType default to RecordType.all so all streams will be recorded if module is enabled with no properties set
+	* Set recordType to RecordType.none if there is an error in the recordType property value
+	* Added new StreamRecorder property to set the delimiter that is used in the nameStr
+		`streamRecorderStreamNamesDelimiter` default value is comma or pipe regex `(\\||,)`
+	*Added extra debug logging
+
+Build 2
+	* Updated ModuleAutoRecord to add the ability to match names to record and record all streams of a certain type
+	* Added / updated the following StreamRecorder Properties:
+		`streamRecorderAutoRecordDebugLog` enable debug logging for the module. debug logging is also enabled for the main StreamRecorder debug logging (streamRecorderDebugEnable) or if logger debugging is enabled
+		`streamRecorderStreamNames` pipe or comma separated list of names to match. can be a single wild card `*`, complete names, regex match, wildcard prefix or wildcard suffix
+		`streamRecorderRecordType` type of streams to record or how to interpret the streamRecorderStreamNames list. Valid values are:
+			`all` - record all streams. Same as `streamRecorderRecordAllStreams`
+			`source` - record all source streams
+			`transcoder` - record all transcoder output streams
+			`allow`, `whitelist` - record streams that match something the names list
+			`deny`, `blacklist` - record streams that don't match something the names list
+			`none` - don't automatically record any streams
+
+Build 1
+	* Initial commit
