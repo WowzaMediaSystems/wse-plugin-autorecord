@@ -1,6 +1,8 @@
 # LiveStreamAutoRecord
 **ModuleAutoRecord** for Wowza Streaming Engine [media server software](https://www.wowza.com/products/streaming-engine) is an alternative to the [Record all incoming streams](https://www.wowza.com/docs/how-to-record-live-streams-wowza-streaming-engine) option in Wowza streaming Engine Manager. It enables you to record either all or selected incoming streams on an application automatically using the default StreamRecorder parameters configured for the application. The recordings are accessible via the Wowza Streaming Engine Manager user interface, the Wowza Streaming Engine REST Service, and the **LiveStreamRecord** HTTP provider.
 
+This repo includes a [compiled version](/lib/wse-plugin-autorecord.jar).
+
 ## Prerequisites
 Wowza Streaming Engine™ 4.0.0 or later is required.
 
