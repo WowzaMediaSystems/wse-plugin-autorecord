@@ -26,8 +26,8 @@ Build 2
 			`all` - record all streams. Same as `streamRecorderRecordAllStreams`
 			`source` - record all source streams
 			`transcoder` - record all transcoder output streams
-			`allow`, `whitelist` - record streams that match something the names list
-			`deny`, `blacklist` - record streams that don't match something the names list
+			`allow` - record streams that match something the names list
+			`deny` - record streams that don't match something the names list
 			`none` - don't automatically record any streams
 
 Build 1

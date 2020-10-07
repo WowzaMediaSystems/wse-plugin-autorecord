@@ -115,14 +115,12 @@ public class ModuleAutoRecord extends ModuleBase
 			switch (recordType)
 			{
 			case allow:
-			case whitelist:
 				matchFound = checkNames(streamName);
 				if (matchFound)
 					canRecord = true;
 				break;
 
 			case deny:
-			case blacklist:
 				matchFound = checkNames(streamName);
 				if (!matchFound)
 					canRecord = true;
