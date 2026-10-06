@@ -11,6 +11,24 @@ When the application is started, the module checks to see if the `streamRecorder
 
 Each recorder that's started uses the default StreamRecorder parameters that are configured for the application. These can be set via the [StreamRecorder properties](https://www.wowza.com/docs/how-to-record-live-streams-wowza-streaming-engine#livestreamrecordproperties). For more information, see [How to record live streams (Wowza Streaming Engine)](https://www.wowza.com/docs/how-to-record-live-streams-wowza-streaming-engine)
 
+To use the provided custom file naming delegate, set the following StreamRecorder property:
+```
+Name: streamRecorderFileVersionDelegate
+Value: com.wowza.wms.plugin.AutoRecordFileVersionDelegate
+Type: String
+```
+
+You can then use the following StreamRecorder properties that are supported by this delegate to customize the recording's file name.
+```
+Name: streamRecorderFileVersionTemplate
+Description: Output file name. Supports extrapolated tags: ${SourceStreamName}, ${BaseFileName}, ${SegmentNumber}, ${RecordingStartTime}, ${SegmentTime}
+Default: ${SourceStreamName}_${RecordingStartTime}_${SegmentNumber}
+
+Name: streamRecorderFileVersionDateTimeFormat
+Description: Joda-Time pattern used for ${RecordingStartTime} and ${SegmentTime}, e.g. MMddyyyy.
+Default: yyyy-MM-dd-HH.mm.ss.SSS-z
+```
+
 ## More resources
 To use the compiled version of this module, see [How to start recording streams automatically (LiveStreamRecordAutoRecord)](https://www.wowza.com/docs/how-to-start-recording-streams-automatically-livestreamrecordautorecord).
 

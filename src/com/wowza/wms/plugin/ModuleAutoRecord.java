@@ -9,6 +9,7 @@ import java.util.regex.PatternSyntaxException;
 import com.wowza.util.StringUtils;
 import com.wowza.wms.application.IApplicationInstance;
 import com.wowza.wms.livestreamrecord.manager.ILiveStreamRecordManager;
+import com.wowza.wms.livestreamrecord.manager.IStreamRecorderFileVersionDelegate;
 import com.wowza.wms.livestreamrecord.manager.StreamRecorderParameters;
 import com.wowza.wms.logging.WMSLogger;
 import com.wowza.wms.logging.WMSLoggerFactory;
@@ -21,6 +22,7 @@ import com.wowza.wms.vhost.IVHost;
 public class ModuleAutoRecord extends ModuleBase
 {
 	public static final String CLASSNAME = "ModuleAutoRecord";
+	public static final String MODULE_VERSION = ReleaseInfo.getVersion();
 
 	private enum RecordType
 	{
@@ -43,7 +45,7 @@ public class ModuleAutoRecord extends ModuleBase
 	public void onAppCreate(IApplicationInstance appInstance)
 	{
 		logger = WMSLoggerFactory.getLoggerObj(appInstance);
-		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] Build #6", WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
+		logger.info(CLASSNAME + ".onAppCreate[" + appInstance.getContextStr() + "] " + ReleaseInfo.getProject() + " version: " + MODULE_VERSION + " build: " + ReleaseInfo.getBuildNumber(), WMSLoggerIDs.CAT_application, WMSLoggerIDs.EVT_comment);
 
 		this.appInstance = appInstance;
 		vhost = appInstance.getVHost();
