@@ -34,7 +34,11 @@ dependencies {
     compileOnly fileTree(dir: "$wseLibDir", include: '*.jar')
     compileOnly 'org.apache.logging.log4j:log4j-core:2.17.2'
     compileOnly 'org.apache.logging.log4j:log4j-api:2.17.2'
-    testCompileOnly fileTree(dir: "$wseLibDir", include: '*.jar')
+    testImplementation fileTree(dir: "$wseLibDir", include: '*.jar')
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 gitProperties {
@@ -49,6 +53,11 @@ sourceSets {
     main {
         java {
             srcDirs = ['src', layout.buildDirectory.dir('generated/java')]
+        }
+    }
+    test {
+        java {
+            srcDirs = ['test']
         }
     }
 }

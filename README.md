@@ -25,7 +25,7 @@ Description: Output file name. Supports extrapolated tags: ${SourceStreamName}, 
 Default: ${SourceStreamName}_${RecordingStartTime}_${SegmentNumber}
 
 Name: streamRecorderFileVersionDateTimeFormat
-Description: Joda-Time pattern used for ${RecordingStartTime} and ${SegmentTime}, e.g. MMddyyyy.
+Description: Java DateTimeFormatter pattern used for ${RecordingStartTime} and ${SegmentTime}, e.g. MMddyyyy.
 Default: yyyy-MM-dd-HH.mm.ss.SSS-z
 ```
 

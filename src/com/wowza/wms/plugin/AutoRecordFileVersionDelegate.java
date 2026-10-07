@@ -6,9 +6,10 @@ import com.wowza.wms.livestreamrecord.manager.IStreamRecorder;
 import com.wowza.wms.livestreamrecord.manager.IStreamRecorderFileVersionDelegate;
 import com.wowza.wms.logging.WMSLoggerFactory;
 import java.io.File;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * File version delegate that names files using a template with a configurable date/time format.
@@ -17,7 +18,7 @@ import org.joda.time.format.DateTimeFormatter;
  *   streamRecorderFileVersionTemplate - file name template (WSE property, read via StreamRecorderParameters.fileTemplate).
  *       Supported tags: ${SourceStreamName}, ${BaseFileName}, ${SegmentNumber}, ${RecordingStartTime}, ${SegmentTime}.
  *       Default: ${SourceStreamName}_${RecordingStartTime}_${SegmentNumber}
- *   streamRecorderFileVersionDateTimeFormat - Joda-Time pattern used for ${RecordingStartTime} and ${SegmentTime}, e.g. MMddyyyy.
+ *   streamRecorderFileVersionDateTimeFormat - java.time DateTimeFormatter pattern used for ${RecordingStartTime} and ${SegmentTime}, e.g. MMddyyyy.
  *       Default: yyyy-MM-dd-HH.mm.ss.SSS-z
  */
 public class AutoRecordFileVersionDelegate implements IStreamRecorderFileVersionDelegate {
@@ -57,13 +58,16 @@ public class AutoRecordFileVersionDelegate implements IStreamRecorderFileVersion
                 template = template.substring(0, template.length() - 4);
 
             DateTimeFormatter formatter = getDateTimeFormatter(recorder);
-            DateTime startTime = recorder.getStartTime() != null ? recorder.getStartTime() : DateTime.now();
+            ZoneId zone = ZoneId.systemDefault();
+            ZonedDateTime now = ZonedDateTime.now(zone);
+            // IStreamRecorder.getStartTime() returns a Joda DateTime, convert it via epoch millis
+            ZonedDateTime startTime = recorder.getStartTime() != null ? Instant.ofEpochMilli(recorder.getStartTime().getMillis()).atZone(zone) : now;
 
             String fileName = template
                     .replace(STREAM_NAME_TAG, recorder.getStreamName())
                     .replace(BASE_NAME_TAG, oldName)
-                    .replace(START_TIME_TAG, formatter.print(startTime))
-                    .replace(SEGMENT_TIME_TAG, formatter.print(DateTime.now()))
+                    .replace(START_TIME_TAG, formatter.format(startTime))
+                    .replace(SEGMENT_TIME_TAG, formatter.format(now))
                     .replace(SEGMENT_NUMBER_TAG, String.valueOf(recorder.getSegmentNumber()));
 
             name = oldBasePath + File.separator + fileName + oldExt;
@@ -94,16 +98,17 @@ public class AutoRecordFileVersionDelegate implements IStreamRecorderFileVersion
         if (recorder.getAppInstance() != null)
         {
             WMSProperties props = recorder.getAppInstance().getStreamRecorderProperties();
-            format = props.getPropertyStr(PROP_DATETIME_FORMAT, format);        }
+            format = props.getPropertyStr(PROP_DATETIME_FORMAT, format);
+        }
 
         try
         {
-            return DateTimeFormat.forPattern(format);
+            return DateTimeFormatter.ofPattern(format);
         }
         catch (IllegalArgumentException e)
         {
             WMSLoggerFactory.getLogger(AutoRecordFileVersionDelegate.class).warn("AutoRecordFileVersionDelegate.getDateTimeFormatter: invalid " + PROP_DATETIME_FORMAT + " [" + format + "], using default: " + e.getMessage());
-            return DateTimeFormat.forPattern(DEFAULT_DATETIME_FORMAT);
+            return DateTimeFormatter.ofPattern(DEFAULT_DATETIME_FORMAT);
         }
     }
 }
